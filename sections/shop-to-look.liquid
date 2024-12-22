@@ -1,0 +1,39 @@
+<section id="shop-the-look-section" class="shop-to-look">
+  <div class="image-container">
+    <!-- Display the featured image from section settings -->
+    {% if section.settings.featured_image %}
+      <img
+        src="{{ section.settings.featured_image | img_url: 'master' }}"
+        alt="Shop the Look Image"
+        class="image"
+        id="shopTheLookImage"
+      />
+    {% else %}
+      <p>Please upload a featured image in the section settings.</p>
+    {% endif %}
+
+    <!-- Hotspots container -->
+    <div id="hotspotsContainer" data-section-id="{{ section.id }}"></div>  </div>
+
+  <!-- Modal container -->
+  <div id="productModalsContainer" class="product-modals"></div>
+
+  {% schema %}
+  {
+    "name": "Shop the Look",
+    "settings": [
+      {
+        "type": "image_picker",
+        "id": "featured_image",
+        "label": "Featured Image"
+      },
+      {
+        "type": "product_list",
+        "id": "products",
+        "label": "Select Products",
+        "limit": 10
+      }
+    ]
+  }
+  {% endschema %}
+</section>
