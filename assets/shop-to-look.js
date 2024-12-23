@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+    // Fetch products from Shopify GraphQL API
     const fetchProducts = async () => {
         const query = `
             query getProducts($first: Int!) {
@@ -21,6 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                     node {
                                         id
                                         title
+                                        quantityAvailable
                                         price {
                                             amount
                                         }
@@ -58,6 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // Render hotspots on the page based on product data
     const renderHotspots = (products) => {
         const hotspotsContainer = document.getElementById("hotspotsContainer");
 
@@ -81,21 +84,23 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
+    // Render modal with product details
     const renderModal = (product) => {
         const modalsContainer = document.getElementById("productModalsContainer");
         const variants = product.variants.edges;
         const hasMultipleVariants = variants.length > 1;
         let quantity = 1;
-
+    
         const variantOptions = hasMultipleVariants
-            ? variants.map(
-                (variant) => `
-                <option value="${variant.node.id}">
-                  ${variant.node.title} - $${parseFloat(variant.node.price.amount).toFixed(2)}
+            ? `<option value="">Please select an option</option>` + 
+              variants.map(
+                  (variant) => `
+                <option value="${variant.node.title}">
+                  ${variant.node.title}
                 </option>`
-            ).join("")
+              ).join("")
             : "";
-
+    
         modalsContainer.innerHTML = `
             <div class="product-modal">
                 <div class="modal-content">
@@ -106,60 +111,99 @@ document.addEventListener("DOMContentLoaded", () => {
                         <h2>${product.title}</h2>
                         <p>${product.description}</p>
                         ${hasMultipleVariants
-                ? `
-                        <label for="variant-select">Choose Size:</label>
-                        <select id="variant-select" class="variant-select">${variantOptions}</select>`
-                : `<p class="price">Price: $${parseFloat(variants[0]?.node.price.amount || 0).toFixed(2)}</p>`
-            }
+            ? `
+                            <label for="variant-select" class="modal-label">Choose Size:</label>
+                            <select id="variant-select" class="variant-select">${variantOptions}</select>
+                            <p class="price-label">Price: <span id="priceDisplay">-</span></p>
+                            <p class="quantity-label">Available Quantity: <span id="quantityAvailable">-</span></p>`
+            : `<p class="price-label">Price: $${parseFloat(variants[0]?.node.price.amount || 0).toFixed(2)}</p>
+                       <p class="quantity-label">Available Quantity: ${variants[0]?.node.quantityAvailable || 0}</p>`
+        }
                         <div class="quantity-control">
                             <label>Quantity:</label>
                             <button id="decreaseQuantity">-</button>
                             <span id="quantityDisplay">${quantity}</span>
                             <button id="increaseQuantity">+</button>
                         </div>
-                        <button id="addToCart" class="add-to-cart-btn">Add to Cart</button>
+                        <button id="addToCart" class="add-to-cart-btn" disabled>Add to Cart</button>
                         <button id="closeModal" class="modal-close-btn">×</button>
                     </div>
                 </div>
             </div>
         `;
-
+    
+        // Close modal event
         document.getElementById("closeModal").addEventListener("click", () => {
             modalsContainer.innerHTML = "";
         });
-
+    
+        // Quantity adjustment
         document.getElementById("increaseQuantity").addEventListener("click", () => {
             quantity++;
             document.getElementById("quantityDisplay").textContent = quantity;
         });
-
+    
         document.getElementById("decreaseQuantity").addEventListener("click", () => {
             if (quantity > 1) {
                 quantity--;
                 document.getElementById("quantityDisplay").textContent = quantity;
             }
         });
-
-        document.getElementById("addToCart").addEventListener("click", () => {
-            const selectedVariant = hasMultipleVariants
-                ? document.getElementById("variant-select")?.value
-                : variants[0]?.node.id;
+    
+        const variantSelect = document.getElementById("variant-select");
+        const addToCartBtn = document.getElementById("addToCart");
+    
+        // Handle size selection
+        if (variantSelect) {
+            variantSelect.addEventListener("change", (event) => {
+                const selectedSize = event.target.value; // Get the value of the selected option
+    
+                if (!selectedSize) {
+                    // Disable add to cart button if no size is selected
+                    addToCartBtn.disabled = true;
+                    document.getElementById("priceDisplay").textContent = "-";
+                    document.getElementById("quantityAvailable").textContent = "-";
+                    return;
+                }
+    
+                const selectedVariant = variants.find(
+                    (variant) => variant.node.title === selectedSize
+                );
+    
+                if (selectedVariant) {
+                    const price = parseFloat(selectedVariant.node.price.amount).toFixed(2);
+                    const availableQuantity = selectedVariant.node.quantityAvailable;
+    
+                    // Enable add to cart button and update price/quantity
+                    addToCartBtn.disabled = false;
+                    document.getElementById("priceDisplay").textContent = `$${price}`;
+                    document.getElementById("quantityAvailable").textContent = availableQuantity || "-";
+                }
+            });
+    
+            // Select the first variant by default if multiple variants exist
+            if (hasMultipleVariants && variants.length > 0) {
+                variantSelect.value = variants[0].node.title; // Set default to the first variant
+                variantSelect.dispatchEvent(new Event("change")); // Trigger change event
+            }
+        }
+    
+        addToCartBtn.addEventListener("click", () => {
             const productId = product.id.split("/").pop();
             const productHandle = product.title.replace(/\s+/g, "-").toLowerCase();
             const size = hasMultipleVariants
-                ? document.getElementById("variant-select")?.options[
-                    document.getElementById("variant-select").selectedIndex
-                ]?.textContent.trim()
+                ? variantSelect?.options[variantSelect.selectedIndex]?.textContent.trim()
                 : "";
-
-            addToCart(selectedVariant, quantity, productId, size, productHandle);
+    
+            addToCart(variants, quantity, productId, size, productHandle);
         });
     };
 
-    const addToCart = async (variantId, quantity, productId, size, productHandle) => {
+    // Add selected product to cart
+    const addToCart = async (variants, quantity, productId, size, productHandle) => {
         const formData = new URLSearchParams();
+
         const sectionId = document.getElementById("hotspotsContainer").dataset.sectionId;
-        formData.append("id", variantId.split("/").pop());
         formData.append("quantity", quantity);
         formData.append("form_type", "product");
         formData.append("utf8", "✓");
@@ -171,8 +215,12 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         formData.append("sections_url", `/products/${productHandle}`);
         if (size) {
-            const formattedSize = size.split(" - ")[0]; 
-            formData.append("Size-1%0D%0A", `${formattedSize}`); 
+            const formattedSize = size.split(" - ")[0];
+            formData.append("Size-1%0D%0A", `${formattedSize}`);
+            const selectedVariant = variants.find(
+                (variant) => variant.node.title === formattedSize
+            ).node.id;
+            formData.append("id", selectedVariant.split("/").pop());
         }
         try {
             const response = await fetch("/cart/add", {
@@ -182,13 +230,13 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             if (response.ok || response.status === 302) {
-                
+
                 showSnackbar("Product added to cart successfully!");
 
-                
+
                 fetchCart();
 
-                
+
                 document.getElementById("productModalsContainer").innerHTML = "";
             } else {
                 throw new Error("Failed to add product to cart.");
@@ -199,6 +247,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // Fetch cart details and update cart count
     const fetchCart = async () => {
         try {
             const response = await fetch("/cart.js");
@@ -212,24 +261,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // Show a snackbar notification with a message
     const showSnackbar = (message) => {
         let snackbar = document.querySelector(".snackbar");
-    
+
         // If snackbar does not exist, create it
         if (!snackbar) {
             snackbar = document.createElement("div");
             snackbar.className = "snackbar";
             document.body.appendChild(snackbar);
         }
-    
+
         snackbar.textContent = message;
         snackbar.classList.add("show");
-    
+
         setTimeout(() => {
             snackbar.classList.remove("show");
         }, 3000);
     };
 
+    // Fetch products and render hotspots on the page
     fetchProducts().then((products) => {
         renderHotspots(products);
     });

@@ -81,6 +81,10 @@
   width: 100%;
 }
 
+.modal-label {
+  font-weight: bold;
+}
+
 .modal-left {
   flex: 1;
   background-color: #f9f9f9;
@@ -93,44 +97,68 @@
   max-width: 100%;
   max-height: 100%;
   object-fit: cover;
+  border-radius: 8px;
 }
 
 .modal-right {
   flex: 1;
-  padding: 20px;
+  padding: 30px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 h2 {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: bold;
   margin-bottom: 10px;
+  color: #333;
 }
 
 p {
   font-size: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+  color: #555;
+  line-height: 1.5;
 }
 
-.price {
-  font-size: 18px;
+.price-label {
+  font-size: 20px;
   font-weight: bold;
-  margin-bottom: 20px;
-}
-
-.modal-label {
-  font-weight: bold;
+  color: #358deb;
   margin-bottom: 5px;
 }
 
+.quantity-label {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.quantity-label span {
+  font-weight: bold;
+}
+
+.quantity-label span.low-stock {
+  color: red; /* Highlight low stock in red */
+}
+
+.quantity-label span.in-stock {
+  color: green; /* Highlight sufficient stock in green */
+}
+
 .variant-select {
-  padding: 8px;
-  width: 100%;
-  margin-bottom: 20px;
+  padding: 10px;
+  width: 80%;
+  margin-bottom: 15px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  font-size: 16px;
+  color: #333;
+}
+
+.variant-select:focus {
+  border-color: #007bff;
+  outline: none;
 }
 
 .quantity-control {
@@ -140,9 +168,9 @@ p {
 }
 
 .quantity-btn {
-  width: 30px;
-  height: 30px;
-  font-size: 20px;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
   font-weight: bold;
   border: 1px solid #ccc;
   background-color: #f0f0f0;
@@ -151,6 +179,7 @@ p {
   align-items: center;
   justify-content: center;
   border-radius: 4px;
+  color: #333;
 }
 
 .quantity-btn:hover {
@@ -158,19 +187,21 @@ p {
 }
 
 #quantityDisplay {
-  margin: 0 10px;
-  font-size: 16px;
+  margin: 0 15px;
+  font-size: 18px;
   font-weight: bold;
 }
 
 .add-to-cart-btn {
   background-color: #007bff;
   color: white;
-  padding: 10px 15px;
+  padding: 12px 20px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: bold;
+  transition: background-color 0.3s;
 }
 
 .add-to-cart-btn:hover {
@@ -179,18 +210,20 @@ p {
 
 .modal-close-btn {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 15px;
+  right: 15px;
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 24px;
   cursor: pointer;
-  color: #333;
+  color: #555;
 }
 
 .modal-close-btn:hover {
   color: #000;
-}.snackbar {
+}
+
+.snackbar {
   visibility: hidden;
   min-width: 250px;
   background-color: #54ae06;
@@ -213,4 +246,12 @@ p {
   visibility: visible;
   opacity: 1;
   bottom: 30px;
+}
+.variant-select {
+  padding: 8px;
+  width: 120px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
 }
