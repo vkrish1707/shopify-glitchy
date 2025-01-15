@@ -1,6 +1,56 @@
 /**
- * @jest-environment jsdom
- */
+ * @jest-environment const fetchSocSuggestionsService = async (socType) => {
+  try {
+    const documents = await ipReuseModel
+      .find({ reportDate: latestIpReuseReportDate, isShow: true })
+      .lean();
+
+    result.liveSocSuggestions = documents.map((doc) => {
+      return {
+        siDieId: doc.siDieId,
+        name: doc.soc[0].value,
+      };
+    });
+
+    const latestAgileDoc = await agileMilestonesModel.getLatest();
+    if (!latestAgileDoc || latestAgileDoc.length === 0) {
+      throw new Error("No Agile record found");
+    }
+
+    const latestAgileReportDate = latestAgileDoc[0].reportDate;
+
+    // Reusable function for aggregation
+    const fetchSuggestionsByMilestone = async (milestone) => {
+      return await agileMilestonesModel.aggregate([
+        { $match: { reportDate: latestAgileReportDate, milestone } },
+        {
+          $group: {
+            _id: "$siDieID",
+            doc: { $first: "$$ROOT" },
+          },
+        },
+        { $replaceRoot: { newRoot: "$doc" } },
+        {
+          $project: {
+            _id: 0,
+            siDieId: "$siDieID",
+            name: "$siDie",
+          },
+        },
+      ]);
+    };
+
+    // Fetch allSocSuggestions for milestone A0
+    result.allSocSuggestions = await fetchSuggestionsByMilestone("A0");
+
+    // Fetch allB0SocSuggestions for milestone B0
+    result.allB0SocSuggestions = await fetchSuggestionsByMilestone("B0");
+
+    return result;
+  } catch (error) {
+    throw new Error(`Error fetching suggestions: ${error}`);
+  }
+};
 
 import { fireEvent, screen } from "@testing-library/dom";
 
