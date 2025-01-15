@@ -1,66 +1,73 @@
 import React, { useState } from "react";
-import { FormControl, MenuItem, Select, Autocomplete, TextField } from "@mui/material";
+import { Modal, Box, Typography, FormControlLabel, Switch, Button } from "@mui/material";
 
-const MilestoneSelection = ({ filteredSuggestions }) => {
-  const [milestone, setMilestone] = useState(""); // To track selected milestone
-  const [autocompleteOptions, setAutocompleteOptions] = useState([]); // Options for Autocomplete
+const SocModal = ({ isOpen, onClose, cellData, cellValue }) => {
+  const [stateOneEnabled, setStateOneEnabled] = useState(false); // State 1
+  const [stateTwoEnabled, setStateTwoEnabled] = useState(false); // State 2
+  const [socStatus, setSocStatus] = useState(false); // Switch status
 
-  // Handle milestone selection
-  const handleMilestoneChange = (event) => {
-    const selectedMilestone = event.target.value;
-    setMilestone(selectedMilestone);
-
-    // Update autocomplete options based on selected milestone
-    if (selectedMilestone === "A0") {
-      setAutocompleteOptions(filteredSuggestions.allSocSuggestions);
-    } else if (selectedMilestone === "B0") {
-      setAutocompleteOptions(filteredSuggestions.allB0SocSuggestions);
-    } else {
-      setAutocompleteOptions([]); // Clear options if no valid milestone is selected
+  // Handle Switch Change
+  const handleSwitchChange = () => {
+    if (!stateOneEnabled && !stateTwoEnabled) {
+      setSocStatus(!socStatus); // Toggle only if states are not enabled
     }
   };
 
-  return (
-    <div>
-      {/* Milestone Selection */}
-      <FormControl sx={{ minWidth: 150 }}>
-        <Select
-          value={milestone}
-          onChange={handleMilestoneChange}
-          displayEmpty
-        >
-          <MenuItem value="" disabled>
-            Select Milestone
-          </MenuItem>
-          <MenuItem value="A0">A0</MenuItem>
-          <MenuItem value="B0">B0</MenuItem>
-        </Select>
-      </FormControl>
+  // Determine Displayed Text for SoC Name
+  const socDisplayText =
+    stateOneEnabled
+      ? "Please select an SIDID"
+      : stateTwoEnabled
+      ? "State Two Value" // Replace this with actual state two value if needed
+      : cellData?.soc || "SoC Name";
 
-      {/* Autocomplete Field */}
-      <div className="soc-tag-option">
-        <Autocomplete
-          disabled={!milestone} // Disable until a milestone is selected
-          options={autocompleteOptions}
-          getOptionLabel={(option) => option?.name || ""}
-          onChange={(event, value) => {
-            if (!value) {
-              handleDerivedFromChange({ target: { value: "" } });
-            } else {
-              searchSiDieId(value);
-            }
-          }}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Search SOC"
-              onChange={handleDerivedFromChange}
+  // Determine Displayed Text for SIDID
+  const sidDisplayText =
+    stateOneEnabled
+      ? "Please make a selection"
+      : stateTwoEnabled
+      ? "State Two SIDID Value" // Replace with actual state two SIDID value
+      : cellValue?.siDieId || "SIDID";
+
+  return (
+    <Modal open={isOpen} onClose={onClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
+      <Box className="owner-modal-box">
+        <div className="modal-heading">
+          {/* Display SoC Name */}
+          <Typography id="modal-modal-title" variant="h6" component="h2">
+            <strong>{socDisplayText}</strong>
+          </Typography>
+        </div>
+        
+        {/* Form Control for Switch */}
+        <FormControlLabel
+          label={socStatus ? "Hide SoC" : "Show SoC"}
+          labelPlacement="start"
+          control={
+            <Switch
+              checked={socStatus}
+              onChange={handleSwitchChange}
+              disabled={stateOneEnabled || stateTwoEnabled} // Disable if any state is enabled
             />
-          )}
+          }
         />
-      </div>
-    </div>
+
+        {/* Display SIDID */}
+        <Box sx={{ mt: 2 }}>
+          {cellValue.isDataFromAgile ? (
+            <div>
+              <h4>ID: {sidDisplayText}</h4>
+              <div className="add-soc">
+                <Button variant="contained" onClick={() => console.log("Action Here")}>
+                  Perform Action
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </Box>
+      </Box>
+    </Modal>
   );
 };
 
-export default MilestoneSelection;
+export default SocModal;
