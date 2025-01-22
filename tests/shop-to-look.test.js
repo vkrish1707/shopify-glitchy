@@ -1,73 +1,69 @@
-import React, { useState, useEffect } from "react";
-import { Modal, Box, Typography, FormControlLabel, Switch, Button } from "@mui/material";
+import React, { useState, useRef } from "react";
+import { AgGridReact } from "ag-grid-react";
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-alpine.css";
 
-const SocModal = ({ isOpen, onClose, cellData, cellValue }) => {
-  const [stateOneEnabled, setStateOneEnabled] = useState(false); // State 1
-  const [stateTwoEnabled, setStateTwoEnabled] = useState(false); // State 2
-  const [socStatus, setSocStatus] = useState(false); // Switch status
-  const [socDisplayText, setSocDisplayText] = useState(""); // SoC text
-  const [sidDisplayText, setSidDisplayText] = useState(""); // SIDID text
+const AlwaysOnTopRowWithFilter = () => {
+  const gridRef = useRef();
+  const [rowData] = useState([
+    { uniqueId: "123", name: "John", age: 30, country: "USA" },
+    { uniqueId: "456", name: "Jane", age: 25, country: "UK" },
+    { uniqueId: "789", name: "Mark", age: 35, country: "Canada" }, // Row to always appear on top
+    { uniqueId: "101", name: "Lucy", age: 28, country: "Germany" },
+  ]);
 
-  // Update display text whenever states or data change
-  useEffect(() => {
-    if (stateOneEnabled) {
-      setSocDisplayText("Please select an SIDID");
-      setSidDisplayText("Please make a selection");
-    } else if (stateTwoEnabled) {
-      setSocDisplayText("State Two Value"); // Replace with actual logic
-      setSidDisplayText("State Two SIDID Value"); // Replace with actual logic
-    } else {
-      setSocDisplayText(cellData?.soc || "SoC Name");
-      setSidDisplayText(cellValue?.siDieId || "SIDID");
+  const [columnDefs] = useState([
+    { field: "name", filter: true },
+    { field: "age", filter: "agNumberColumnFilter" },
+    { field: "country", filter: true },
+  ]);
+
+  const uniqueIdToAlwaysShow = "789"; // Row with this ID will always be on top
+
+  // Custom filtering logic
+  const isExternalFilterPresent = () => {
+    return true; // External filter logic is always active
+  };
+
+  const doesExternalFilterPass = (node) => {
+    // Allow the row with the uniqueId to always pass the filter
+    if (node.data.uniqueId === uniqueIdToAlwaysShow) {
+      return true;
     }
-  }, [stateOneEnabled, stateTwoEnabled, cellData, cellValue]);
+    return false; // Other rows depend on internal filter rules
+  };
 
-  // Handle Switch Change
-  const handleSwitchChange = () => {
-    if (!stateOneEnabled && !stateTwoEnabled) {
-      setSocStatus(!socStatus); // Toggle only if states are not enabled
+  // Post Sort Logic
+  const postSort = (rowNodes) => {
+    // Find the row with the specific uniqueId
+    const alwaysOnTopNode = rowNodes.find((node) => node.data.uniqueId === uniqueIdToAlwaysShow);
+
+    if (alwaysOnTopNode) {
+      // Remove the node from its current position
+      rowNodes.splice(rowNodes.indexOf(alwaysOnTopNode), 1);
+
+      // Move the row to the top of the grid
+      rowNodes.unshift(alwaysOnTopNode);
     }
   };
 
   return (
-    <Modal open={isOpen} onClose={onClose} aria-labelledby="modal-modal-title" aria-describedby="modal-modal-description">
-      <Box className="owner-modal-box">
-        <div className="modal-heading">
-          {/* Display SoC Name */}
-          <Typography id="modal-modal-title" variant="h6" component="h2">
-            <strong>{socDisplayText}</strong>
-          </Typography>
-        </div>
-        
-        {/* Form Control for Switch */}
-        <FormControlLabel
-          label={socStatus ? "Hide SoC" : "Show SoC"}
-          labelPlacement="start"
-          control={
-            <Switch
-              checked={socStatus}
-              onChange={handleSwitchChange}
-              disabled={stateOneEnabled || stateTwoEnabled} // Disable if any state is enabled
-            />
-          }
-        />
-
-        {/* Display SIDID */}
-        <Box sx={{ mt: 2 }}>
-          {cellValue.isDataFromAgile ? (
-            <div>
-              <h4>ID: {sidDisplayText}</h4>
-              <div className="add-soc">
-                <Button variant="contained" onClick={() => console.log("Action Here")}>
-                  Perform Action
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </Box>
-      </Box>
-    </Modal>
+    <div className="ag-theme-alpine" style={{ height: "500px", width: "600px" }}>
+      <AgGridReact
+        ref={gridRef}
+        rowData={rowData}
+        columnDefs={columnDefs}
+        defaultColDef={{
+          sortable: true,
+          filter: true,
+        }}
+        getRowId={(params) => params.data.uniqueId} // Ensure rows are uniquely identified
+        postSort={postSort} // Always move the row with uniqueId to the top
+        isExternalFilterPresent={isExternalFilterPresent} // External filter logic always active
+        doesExternalFilterPass={doesExternalFilterPass} // Exclude the specific row from filters
+      />
+    </div>
   );
 };
 
-export default SocModal;
+export default AlwaysOnTopRowWithFilter;
