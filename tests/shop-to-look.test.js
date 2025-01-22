@@ -3,13 +3,14 @@ import { AgGridReact } from "ag-grid-react";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 
-const AlwaysOnTopRowWithFilter = () => {
-  const gridRef = useRef();
+const AppendRowOnTop = () => {
+  const gridRef = useRef(null);
+
   const [rowData] = useState([
-    { uniqueId: "123", name: "John", age: 30, country: "USA" },
-    { uniqueId: "456", name: "Jane", age: 25, country: "UK" },
-    { uniqueId: "789", name: "Mark", age: 35, country: "Canada" }, // Row to always appear on top
-    { uniqueId: "101", name: "Lucy", age: 28, country: "Germany" },
+    { id: 1, name: "John", age: 30, country: "USA" },
+    { id: 2, name: "Jane", age: 25, country: "UK" },
+    { id: 3, name: "Mark", age: 35, country: "Canada" },
+    { id: 4, name: "Lucy", age: 28, country: "Germany" },
   ]);
 
   const [columnDefs] = useState([
@@ -18,32 +19,38 @@ const AlwaysOnTopRowWithFilter = () => {
     { field: "country", filter: true },
   ]);
 
-  const uniqueIdToAlwaysShow = "789"; // Row with this ID will always be on top
+  const additionalRow = { id: "custom", name: "Always on Top", age: "-", country: "-" };
 
-  // Custom filtering logic
-  const isExternalFilterPresent = () => {
-    return true; // External filter logic is always active
-  };
+  const onFilterChanged = () => {
+    const api = gridRef.current.api;
+    const isFilterActive = !!Object.keys(api.getFilterModel()).length;
 
-  const doesExternalFilterPass = (node) => {
-    // Allow the row with the uniqueId to always pass the filter
-    if (node.data.uniqueId === uniqueIdToAlwaysShow) {
-      return true;
-    }
-    return false; // Other rows depend on internal filter rules
-  };
+    if (isFilterActive) {
+      // Check if the row is already present
+      const displayedRows = [];
+      api.forEachNodeAfterFilter((node) => {
+        displayedRows.push(node.data.id);
+      });
 
-  // Post Sort Logic
-  const postSort = (rowNodes) => {
-    // Find the row with the specific uniqueId
-    const alwaysOnTopNode = rowNodes.find((node) => node.data.uniqueId === uniqueIdToAlwaysShow);
+      if (!displayedRows.includes("custom")) {
+        // Append the custom row on top
+        api.applyTransaction({
+          add: [additionalRow],
+          addIndex: 0, // Add it at the top
+        });
+      }
+    } else {
+      // Remove the additional row if no filters are applied
+      const nodesToRemove = [];
+      api.forEachNode((node) => {
+        if (node.data.id === "custom") {
+          nodesToRemove.push(node.data);
+        }
+      });
 
-    if (alwaysOnTopNode) {
-      // Remove the node from its current position
-      rowNodes.splice(rowNodes.indexOf(alwaysOnTopNode), 1);
-
-      // Move the row to the top of the grid
-      rowNodes.unshift(alwaysOnTopNode);
+      if (nodesToRemove.length > 0) {
+        api.applyTransaction({ remove: nodesToRemove });
+      }
     }
   };
 
@@ -57,13 +64,11 @@ const AlwaysOnTopRowWithFilter = () => {
           sortable: true,
           filter: true,
         }}
-        getRowId={(params) => params.data.uniqueId} // Ensure rows are uniquely identified
-        postSort={postSort} // Always move the row with uniqueId to the top
-        isExternalFilterPresent={isExternalFilterPresent} // External filter logic always active
-        doesExternalFilterPass={doesExternalFilterPass} // Exclude the specific row from filters
+        getRowId={(params) => params.data.id} // Ensure unique row IDs
+        onFilterChanged={onFilterChanged} // Listen for filter changes
       />
     </div>
   );
 };
 
-export default AlwaysOnTopRowWithFilter;
+export default AppendRowOnTop;
