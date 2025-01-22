@@ -3,7 +3,7 @@ import { AgGridReact } from "ag-grid-react";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 
-const AppendRowOnTop = () => {
+const AppendRowToFilteredGrid = () => {
   const gridRef = useRef(null);
 
   const [rowData] = useState([
@@ -21,36 +21,35 @@ const AppendRowOnTop = () => {
 
   const additionalRow = { id: "custom", name: "Always on Top", age: "-", country: "-" };
 
+  // Function to handle filter changes
   const onFilterChanged = () => {
     const api = gridRef.current.api;
     const isFilterActive = !!Object.keys(api.getFilterModel()).length;
 
     if (isFilterActive) {
-      // Check if the row is already present
-      const displayedRows = [];
+      // Collect all currently filtered rows
+      const filteredRows = [];
       api.forEachNodeAfterFilter((node) => {
-        displayedRows.push(node.data.id);
+        filteredRows.push(node);
       });
 
-      if (!displayedRows.includes("custom")) {
-        // Append the custom row on top
-        api.applyTransaction({
+      // Check if the additional row is already present
+      const customRowExists = filteredRows.some((node) => node.data.id === "custom");
+
+      if (!customRowExists) {
+        // Dynamically inject the additional row at the top
+        api.applyTransactionAsync({
           add: [additionalRow],
-          addIndex: 0, // Add it at the top
+          addIndex: 0,
         });
       }
     } else {
-      // Remove the additional row if no filters are applied
-      const nodesToRemove = [];
+      // Remove the additional row when filters are cleared
       api.forEachNode((node) => {
         if (node.data.id === "custom") {
-          nodesToRemove.push(node.data);
+          api.applyTransactionAsync({ remove: [node.data] });
         }
       });
-
-      if (nodesToRemove.length > 0) {
-        api.applyTransaction({ remove: nodesToRemove });
-      }
     }
   };
 
@@ -65,10 +64,10 @@ const AppendRowOnTop = () => {
           filter: true,
         }}
         getRowId={(params) => params.data.id} // Ensure unique row IDs
-        onFilterChanged={onFilterChanged} // Listen for filter changes
+        onFilterChanged={onFilterChanged} // Trigger logic on filter changes
       />
     </div>
   );
 };
 
-export default AppendRowOnTop;
+export default AppendRowToFilteredGrid;
