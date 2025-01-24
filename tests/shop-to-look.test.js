@@ -1,66 +1,37 @@
-import React, { useState } from "react";
-import { AgGridReact } from "ag-grid-react";
-import "ag-grid-community/styles/ag-grid.css";
-import "ag-grid-community/styles/ag-theme-alpine.css";
+const handleColumnMoved = () => {
+  const gridApi = gridRef.current?.api;
 
-const CustomHeader = (props) => {
-  const [showDetails, setShowDetails] = useState(false);
+  if (!gridApi) {
+    console.error("Grid API is not available.");
+    return;
+  }
 
-  const handleDoubleClick = () => {
-    setShowDetails(!showDetails);
-  };
+  // Fetch the displayed columns and their order
+  const displayedColumns = gridApi
+    .getAllDisplayedColumns()
+    .filter((col) => col.isVisible()) // Ensure only visible columns are considered
+    .map((col) => col.getColId());
 
-  return (
-    <div onDoubleClick={handleDoubleClick} style={{ cursor: "pointer" }}>
-      {/* Main Header Title */}
-      <div>{props.displayName}</div>
+  console.log("Displayed Columns:", displayedColumns);
 
-      {/* Additional Information */}
-      {showDetails && (
-        <div style={{ marginTop: "5px", fontSize: "12px", color: "#666" }}>
-          {/* Custom information or component */}
-          <div>Additional Info 1</div>
-          <div>Additional Info 2</div>
-        </div>
-      )}
-    </div>
-  );
+  // Get the column definitions once
+  const columnDefinitions = gridApi.getColumnDefs();
+
+  if (!columnDefinitions || columnDefinitions.length === 0) {
+    console.error("No column definitions found.");
+    return;
+  }
+
+  // Map the reordered column definitions
+  const reorderedColumns = displayedColumns.reduce((acc, colId) => {
+    const colDef = columnDefinitions.find((col) => col.field === colId);
+    if (colDef) acc.push(colDef);
+    else console.warn(`Column definition not found for field: ${colId}`);
+    return acc;
+  }, []);
+
+  console.log("Reordered Columns:", reorderedColumns);
+
+  // Set the updated column definitions to the second grid
+  setSsColumnDefs(reorderedColumns);
 };
-
-const CustomHeaderExample = () => {
-  const [rowData] = useState([
-    { name: "John", age: 30, country: "USA" },
-    { name: "Jane", age: 25, country: "UK" },
-    { name: "Mark", age: 35, country: "Canada" },
-    { name: "Lucy", age: 28, country: "Germany" },
-  ]);
-
-  const [columnDefs] = useState([
-    {
-      field: "name",
-      headerName: "Name",
-      headerComponent: CustomHeader, // Use the custom header component
-    },
-    {
-      field: "age",
-      headerName: "Age",
-      headerComponent: CustomHeader, // Use the custom header component
-    },
-    { field: "country", headerName: "Country" },
-  ]);
-
-  return (
-    <div className="ag-theme-alpine" style={{ height: "500px", width: "600px" }}>
-      <AgGridReact
-        rowData={rowData}
-        columnDefs={columnDefs}
-        defaultColDef={{
-          sortable: true,
-          filter: true,
-        }}
-      />
-    </div>
-  );
-};
-
-export default CustomHeaderExample;
