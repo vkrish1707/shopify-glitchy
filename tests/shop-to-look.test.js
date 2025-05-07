@@ -1,47 +1,62 @@
-import React, { useState, useEffect } from 'react';
-import { Select, MenuItem, IconButton, TextField, Box, Button } from '@mui/material';
+import React, { useState } from 'react';
+import { MenuItem, Select, Box, TextField, IconButton, Typography, Button, ListSubheader, InputBase } from '@mui/material';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CheckIcon from '@mui/icons-material/Check';
-import AddIcon from '@mui/icons-material/Add';
+import DoneIcon from '@mui/icons-material/Done';
 
 const SourceListUpdater = ({ rowData, setRowData, gridApi, updateBackend }) => {
     const [sourceList, setSourceList] = useState(['Java', 'Python', 'JavaScript']);
-    const [editingIndex, setEditingIndex] = useState(null);
-    const [editedValue, setEditedValue] = useState('');
-    const [newSource, setNewSource] = useState('');
     const [selectedSource, setSelectedSource] = useState('');
+    const [editingItem, setEditingItem] = useState('');
+    const [editedText, setEditedText] = useState('');
+    const [newItem, setNewItem] = useState('');
+    const [enableApply, setEnableApply] = useState(false);
 
-    const handleSelectChange = (e) => {
-        setSelectedSource(e.target.value);
-    };
-
-    const handleEdit = (index, value) => {
-        setEditingIndex(index);
-        setEditedValue(value);
-    };
-
-    const handleSaveEdit = (index) => {
-        const updated = [...sourceList];
-        updated[index] = editedValue;
-        setSourceList(updated);
-        setEditingIndex(null);
-        updateBackend('edit', updated[index]);
-    };
-
-    const handleDelete = (index) => {
-        const updated = sourceList.filter((_, i) => i !== index);
-        setSourceList(updated);
-        updateBackend('delete', sourceList[index]);
-    };
-
-    const handleAdd = () => {
-        if (newSource.trim()) {
-            const updated = [...sourceList, newSource];
-            setSourceList(updated);
-            setNewSource('');
-            updateBackend('add', newSource);
+    const handleAddNewItem = () => {
+        const trimmed = newItem.trim();
+        if (trimmed && !sourceList.includes(trimmed)) {
+            const updatedList = [...sourceList, trimmed];
+            setSourceList(updatedList);
+            setSelectedSource(trimmed);
+            updateBackend('add', trimmed);
+            setNewItem('');
+            setEnableApply(true);
         }
+    };
+
+    const handleDelete = (itemToDelete) => {
+        const updated = sourceList.filter(item => item !== itemToDelete);
+        setSourceList(updated);
+        if (selectedSource === itemToDelete) {
+            setSelectedSource('');
+            setEnableApply(false);
+        }
+        updateBackend('delete', itemToDelete);
+    };
+
+    const handleEdit = (item) => {
+        setEditingItem(item);
+        setEditedText(item);
+    };
+
+    const handleEditConfirm = () => {
+        const trimmed = editedText.trim();
+        if (trimmed && !sourceList.includes(trimmed)) {
+            const updated = sourceList.map(item => item === editingItem ? trimmed : item);
+            setSourceList(updated);
+            if (selectedSource === editingItem) {
+                setSelectedSource(trimmed);
+            }
+            updateBackend('edit', { old: editingItem, new: trimmed });
+        }
+        setEditingItem('');
+        setEditedText('');
+    };
+
+    const handleChange = (e) => {
+        setSelectedSource(e.target.value);
+        setEnableApply(true);
     };
 
     const handleApplyToAllRows = () => {
@@ -60,62 +75,81 @@ const SourceListUpdater = ({ rowData, setRowData, gridApi, updateBackend }) => {
 
         setRowData(updatedRows);
         updateBackend('bulkUpdate', selectedSource, visibleNodes.map(node => node.data));
+        setEnableApply(false);
     };
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Select value={selectedSource} onChange={handleSelectChange} size="small">
-                {sourceList.map((source, index) => (
-                    <MenuItem key={index} value={source}>
-                        {editingIndex === index ? (
-                            <>
-                                <TextField
-                                    value={editedValue}
-                                    onChange={(e) => setEditedValue(e.target.value)}
-                                    size="small"
-                                    autoFocus
-                                    sx={{ width: '100px', marginRight: 1 }}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: 300 }}>
+            <Select
+                value={selectedSource}
+                onChange={handleChange}
+                displayEmpty
+                size="small"
+                renderValue={(value) => value || 'Select or Add Source'}
+                MenuProps={{
+                    PaperProps: {
+                        style: { maxHeight: 300 },
+                        onMouseDown: (e) => e.stopPropagation(),
+                    }
+                }}
+            >
+                {sourceList.map((item) => (
+                    <MenuItem key={item} value={item}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                            {editingItem === item ? (
+                                <InputBase
+                                    value={editedText}
+                                    onChange={(e) => setEditedText(e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    sx={{ borderBottom: '1px solid gray', fontSize: '14px', flexGrow: 1, mr: 1 }}
                                 />
-                                <IconButton size="small" onClick={() => handleSaveEdit(index)}>
-                                    <CheckIcon fontSize="small" />
+                            ) : (
+                                <Typography>{item}</Typography>
+                            )}
+                            {editingItem === item ? (
+                                <IconButton edge="end" size="small" onClick={(e) => { e.stopPropagation(); handleEditConfirm(); }}>
+                                    <DoneIcon color="success" fontSize="small" />
                                 </IconButton>
-                            </>
-                        ) : (
-                            <>
-                                {source}
-                                <IconButton size="small" onClick={() => handleEdit(index, source)}>
-                                    <EditIcon fontSize="small" />
-                                </IconButton>
-                                <IconButton size="small" onClick={() => handleDelete(index)}>
-                                    <DeleteIcon fontSize="small" />
-                                </IconButton>
-                            </>
-                        )}
+                            ) : (
+                                <>
+                                    <IconButton edge="end" size="small" onClick={(e) => { e.stopPropagation(); handleEdit(item); }}>
+                                        <EditIcon fontSize="small" sx={{ color: 'gray' }} />
+                                    </IconButton>
+                                    <IconButton edge="end" size="small" onClick={(e) => { e.stopPropagation(); handleDelete(item); }}>
+                                        <RemoveCircleOutlineIcon fontSize="small" sx={{ color: 'red' }} />
+                                    </IconButton>
+                                </>
+                            )}
+                        </Box>
                     </MenuItem>
                 ))}
+
+                <ListSubheader disableSticky>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', px: 1 }}>
+                        <InputBase
+                            value={newItem}
+                            onChange={(e) => setNewItem(e.target.value)}
+                            placeholder="Add new source"
+                            sx={{ fontSize: '14px', borderBottom: '1px solid #ccc', flexGrow: 1 }}
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleAddNewItem(); }}>
+                            <AddCircleOutlineIcon color="primary" fontSize="small" />
+                        </IconButton>
+                    </Box>
+                </ListSubheader>
             </Select>
 
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <TextField
-                    label="New Source"
-                    value={newSource}
-                    onChange={(e) => setNewSource(e.target.value)}
+            {enableApply && (
+                <Button
+                    variant="contained"
+                    onClick={handleApplyToAllRows}
+                    sx={{ alignSelf: 'flex-start' }}
                     size="small"
-                    sx={{ marginRight: 1 }}
-                />
-                <IconButton size="small" onClick={handleAdd}>
-                    <AddIcon fontSize="small" />
-                </IconButton>
-            </Box>
-
-            <Button
-                variant="contained"
-                onClick={handleApplyToAllRows}
-                disabled={!selectedSource}
-                sx={{ alignSelf: 'flex-start', marginTop: 1 }}
-            >
-                Set Source List to Visible Rows
-            </Button>
+                >
+                    Apply to Visible Rows
+                </Button>
+            )}
         </Box>
     );
 };
