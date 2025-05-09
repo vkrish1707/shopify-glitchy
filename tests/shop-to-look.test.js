@@ -1,33 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Select, MenuItem } from '@mui/material';
-
-const DropdownEditor = (props) => {
-    const [value, setValue] = useState(props.value || '');
-    const options = props.options || [];
-    const [isEditing, setIsEditing] = useState(false);
-
-    useEffect(() => {
-        // AG Grid sets editing when the component mounts if it's in edit mode
-        setIsEditing(true);
-        setValue(props.value || '');
-    }, []);
+const SkillEditor = ({ value, api, stopEditing }) => {
+    const [val, setVal] = useState(value || '');
+    const options = ['Java', 'Python', 'Go']; // or props.options
 
     const handleChange = (e) => {
-        const newVal = e.target.value;
-        setValue(newVal);
-        props.api.stopEditing(); // required
+        setVal(e.target.value);
+        stopEditing(); // close editor
     };
 
-    // Required by AG Grid to return value after editing
-    const getValue = () => value;
+    const getValue = () => val;
 
-    return isEditing ? (
+    return (
         <Select
-            value={value}
+            value={val}
             onChange={handleChange}
             autoFocus
-            size="small"
             fullWidth
+            size="small"
         >
             {options.map((opt) => (
                 <MenuItem key={opt} value={opt}>
@@ -35,9 +23,17 @@ const DropdownEditor = (props) => {
                 </MenuItem>
             ))}
         </Select>
-    ) : (
-        <span>{value || 'Select'}</span>
     );
 };
 
-export default DropdownEditor;
+SkillEditor.getValue = function () {
+    return this.val;
+};
+
+export { SkillRenderer, SkillEditor };
+
+
+
+const SkillRenderer = ({ value }) => {
+    return <span>{value || 'Select'}</span>;
+};
