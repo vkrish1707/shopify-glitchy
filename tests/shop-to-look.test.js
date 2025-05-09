@@ -1,13 +1,23 @@
-const SkillEditor = ({ value, api, stopEditing }) => {
-    const [val, setVal] = useState(value || '');
-    const options = ['Java', 'Python', 'Go']; // or props.options
+import React, { useState, useEffect } from 'react';
+import { Select, MenuItem } from '@mui/material';
+
+const SkillEditor = (props) => {
+    const [val, setVal] = useState(props.value || '');
+    const employeeId = props.data.EMPLOYEE_ID;
+
+    const options = ['Java', 'Python', 'Go']; // Or dynamic
 
     const handleChange = (e) => {
-        setVal(e.target.value);
-        stopEditing(); // close editor
-    };
+        const newValue = e.target.value;
+        setVal(newValue);
 
-    const getValue = () => val;
+        // Call your main updateRowData function
+        if (props.context && typeof props.context.updateRowData === 'function') {
+            props.context.updateRowData('SKILL_SET', newValue, employeeId);
+        }
+
+        props.stopEditing(); // Exit edit mode
+    };
 
     return (
         <Select
@@ -26,14 +36,4 @@ const SkillEditor = ({ value, api, stopEditing }) => {
     );
 };
 
-SkillEditor.getValue = function () {
-    return this.val;
-};
-
-export { SkillRenderer, SkillEditor };
-
-
-
-const SkillRenderer = ({ value }) => {
-    return <span>{value || 'Select'}</span>;
-};
+export default SkillEditor;
